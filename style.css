@@ -3,34 +3,71 @@ body {
   padding: 20px;
   font-family: Arial, sans-serif;
   background: #f6f7fb;
+  color: #222;
+}
+
+.app {
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
 .toolbar button,
-.toolbar input {
-  padding: 8px 12px;
+.toolbar input[type="file"] {
+  padding: 10px 14px;
   font-size: 14px;
+  border: 1px solid #bfc7d6;
+  border-radius: 10px;
+  background: #ffffff;
 }
 
-#status {
-  margin-bottom: 12px;
+.toolbar button {
+  cursor: pointer;
+}
+
+.toolbar button:hover {
+  background: #f0f4fb;
+}
+
+.status {
+  margin-bottom: 14px;
+  font-size: 14px;
   color: #444;
 }
 
 .board-wrap {
-  padding: 16px;
+  padding: 18px;
   background: #e9edf5;
-  border-radius: 14px;
+  border-radius: 18px;
   overflow: auto;
 }
 
-canvas {
+.canvas-container-custom {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+
+#baseCanvas,
+#sandboxCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
   border: 1px solid #bbb;
-  background: white;
+  background: transparent;
+}
+
+#baseCanvas {
+  z-index: 1;
+  background: #ffffff;
+}
+
+#sandboxCanvas {
+  z-index: 2;
 }
