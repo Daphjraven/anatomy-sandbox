@@ -3,29 +3,35 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Practice Sandbox</title>
+  <title>Anatomy Sandbox</title>
   <link rel="stylesheet" href="style.css" />
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
-  <div class="toolbar">
-    <input type="file" id="fileInput" accept=".png,.jpg,.jpeg,.pdf" />
-    <button id="penBtn">Pen</button>
-    <button id="eraserBtn">Eraser</button>
-    <button id="selectBtn">Select/Move</button>
-    <button id="textBtn">Add Label</button>
-    <button id="undoBtn">Undo</button>
-    <button id="clearBtn">Clear Ink/Labels</button>
-    <button id="prevPageBtn">Prev Page</button>
-    <button id="nextPageBtn">Next Page</button>
-    <button id="exportBtn">Export PNG</button>
-  </div>
+  <div class="app">
+    <div class="toolbar">
+      <input type="file" id="fileInput" accept=".png,.jpg,.jpeg,.pdf" />
+      <button id="penBtn">Pen</button>
+      <button id="eraserBtn">Eraser</button>
+      <button id="selectBtn">Select/Move</button>
+      <button id="textBtn">Add Label</button>
+      <button id="undoBtn">Undo</button>
+      <button id="clearBtn">Clear Ink/Labels</button>
+      <button id="prevPageBtn">Prev Page</button>
+      <button id="nextPageBtn">Next Page</button>
+      <button id="exportBtn">Export PNG</button>
+    </div>
 
-  <div id="status">Ready. Upload a PNG or PDF.</div>
+    <div id="status" class="status">Ready. Upload a PNG or PDF.</div>
 
-  <div class="board-wrap">
-    <canvas id="sandboxCanvas" width="900" height="1200"></canvas>
+    <div class="board-wrap">
+      <div id="canvasContainer" class="canvas-container-custom">
+        <canvas id="baseCanvas" width="900" height="1200"></canvas>
+        <canvas id="sandboxCanvas" width="900" height="1200"></canvas>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>
