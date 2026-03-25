@@ -16,22 +16,28 @@ body {
   flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 14px;
+  align-items: center;
 }
 
 .toolbar button,
-.toolbar input[type="file"] {
+.toolbar input[type="file"],
+.file-button {
   padding: 10px 14px;
   font-size: 14px;
   border: 1px solid #bfc7d6;
   border-radius: 10px;
   background: #ffffff;
+  color: #222;
+  box-sizing: border-box;
 }
 
-.toolbar button {
+.toolbar button,
+.file-button {
   cursor: pointer;
 }
 
-.toolbar button:hover {
+.toolbar button:hover,
+.file-button:hover {
   background: #f0f4fb;
 }
 
