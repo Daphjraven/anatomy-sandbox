@@ -1,0 +1,36 @@
+body {
+  margin: 0;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  background: #f6f7fb;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.toolbar button,
+.toolbar input {
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+#status {
+  margin-bottom: 12px;
+  color: #444;
+}
+
+.board-wrap {
+  padding: 16px;
+  background: #e9edf5;
+  border-radius: 14px;
+  overflow: auto;
+}
+
+canvas {
+  border: 1px solid #bbb;
+  background: white;
+}
