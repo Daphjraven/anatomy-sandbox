@@ -16,6 +16,13 @@ let currentPage = 1;
 let pdfPageCount = 1;
 let history = [];
 let isRestoring = false;
+let currentTool = "pen";
+
+let currentSource = {
+  type: null,       // "pdf" | "image"
+  name: null,
+  page: 1
+};
 
 function setStatus(message) {
   statusEl.textContent = message;
@@ -62,60 +69,67 @@ function restoreFromJson(jsonStr) {
 }
 
 function undo() {
-  if (history.length <= 1) return;
+  if (history.length <= 1) {
+    setStatus("Nothing to undo.");
+    return;
+  }
 
   history.pop();
   restoreFromJson(history[history.length - 1]);
   setStatus("Undid last action.");
 }
 
-function setPenMode() {
-  fabricCanvas.isDrawingMode = true;
+function setTool(tool) {
+  currentTool = tool;
+
+  fabricCanvas.isDrawingMode = false;
   fabricCanvas.selection = false;
 
   fabricCanvas.forEachObject((obj) => {
-    obj.selectable = false;
-    obj.evented = false;
+    const selectable = tool === "select";
+    obj.selectable = selectable;
+    obj.evented = selectable;
   });
 
-  fabricCanvas.freeDrawingBrush = new fabric.PencilBrush(fabricCanvas);
-  fabricCanvas.freeDrawingBrush.width = 3;
-  fabricCanvas.freeDrawingBrush.color = "#111111";
+  if (tool === "pen") {
+    fabricCanvas.isDrawingMode = true;
+    fabricCanvas.freeDrawingBrush = new fabric.PencilBrush(fabricCanvas);
+    fabricCanvas.freeDrawingBrush.width = 3;
+    fabricCanvas.freeDrawingBrush.color = "#111111";
+    setStatus("Pen mode.");
+    return;
+  }
 
-  setStatus("Pen mode.");
+  if (tool === "eraser") {
+    fabricCanvas.isDrawingMode = true;
+    fabricCanvas.freeDrawingBrush = new fabric.PencilBrush(fabricCanvas);
+    fabricCanvas.freeDrawingBrush.width = 18;
+    fabricCanvas.freeDrawingBrush.color = "#ffffff";
+    setStatus("Eraser mode.");
+    return;
+  }
+
+  if (tool === "select") {
+    fabricCanvas.selection = true;
+    setStatus("Select mode.");
+    return;
+  }
+}
+
+function setPenMode() {
+  setTool("pen");
 }
 
 function setEraserMode() {
-  fabricCanvas.isDrawingMode = true;
-  fabricCanvas.selection = false;
-
-  fabricCanvas.forEachObject((obj) => {
-    obj.selectable = false;
-    obj.evented = false;
-  });
-
-  fabricCanvas.freeDrawingBrush = new fabric.PencilBrush(fabricCanvas);
-  fabricCanvas.freeDrawingBrush.width = 18;
-  fabricCanvas.freeDrawingBrush.color = "#ffffff";
-
-  setStatus("Eraser mode.");
+  setTool("eraser");
 }
 
 function setSelectMode() {
-  fabricCanvas.isDrawingMode = false;
-  fabricCanvas.selection = true;
-
-  fabricCanvas.forEachObject((obj) => {
-    const isAnnotation = !!obj.annotationType;
-    obj.selectable = isAnnotation;
-    obj.evented = isAnnotation;
-  });
-
-  setStatus("Select mode.");
+  setTool("select");
 }
 
 function addTextLabel() {
-  fabricCanvas.isDrawingMode = false;
+  setTool("select");
 
   const textbox = new fabric.Textbox("Label", {
     left: 100,
@@ -135,7 +149,7 @@ function addTextLabel() {
   fabricCanvas.renderAll();
 
   saveHistory();
-  setStatus("Added label.");
+  setStatus("Added label. Click Pen to draw again.");
 }
 
 function clearAnnotations() {
@@ -204,6 +218,16 @@ function loadImageFile(file) {
       clearBaseCanvas();
       baseCtx.drawImage(img, 0, 0, width, height);
 
+      currentSource = {
+        type: "image",
+        name: file.name,
+        page: 1
+      };
+
+      currentPdf = null;
+      currentPage = 1;
+      pdfPageCount = 1;
+
       resetOverlay();
       setPenMode();
       setStatus(`Loaded image: ${file.name}`);
@@ -229,6 +253,8 @@ async function renderPdfPage(pageNumber) {
     viewport: viewport
   }).promise;
 
+  currentSource.page = pageNumber;
+
   resetOverlay();
   setPenMode();
   setStatus(`Loaded PDF page ${currentPage} of ${pdfPageCount}`);
@@ -244,7 +270,89 @@ async function loadPdfFile(file) {
   pdfPageCount = currentPdf.numPages;
   currentPage = 1;
 
+  currentSource = {
+    type: "pdf",
+    name: file.name,
+    page: 1
+  };
+
   await renderPdfPage(currentPage);
+}
+
+function buildSessionData() {
+  return {
+    title: "Sandbox Session",
+    version: 1,
+    savedAt: new Date().toISOString(),
+    source: {
+      type: currentSource.type,
+      name: currentSource.name,
+      page: currentSource.page
+    },
+    board: {
+      width: baseCanvas.width,
+      height: baseCanvas.height
+    },
+    annotations: fabricCanvas.toJSON(["annotationType"])
+  };
+}
+
+function saveSessionToFile() {
+  const session = buildSessionData();
+  const blob = new Blob([JSON.stringify(session, null, 2)], {
+    type: "application/json"
+  });
+
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+
+  const baseName = currentSource.name
+    ? currentSource.name.replace(/\.[^/.]+$/, "")
+    : "sandbox-session";
+
+  link.download = `${baseName}-session.json`;
+  link.click();
+
+  setStatus("Saved session JSON.");
+}
+
+async function loadSessionFromFile(file) {
+  const text = await file.text();
+  const session = JSON.parse(text);
+
+  if (!session.annotations) {
+    throw new Error("Invalid session file.");
+  }
+
+  if (session.board?.width && session.board?.height) {
+    resizeBoard(session.board.width, session.board.height);
+  }
+
+  clearBaseCanvas();
+
+  currentSource = {
+    type: session.source?.type ?? null,
+    name: session.source?.name ?? null,
+    page: session.source?.page ?? 1
+  };
+
+  isRestoring = true;
+  fabricCanvas.loadFromJSON(session.annotations, () => {
+    fabricCanvas.renderAll();
+    isRestoring = false;
+    history = [];
+    saveHistory();
+    setSelectMode();
+    setStatus("Loaded session JSON. Reopen the original PDF or image if you want the base document underneath.");
+  });
+}
+
+function importFromDrivePlaceholder() {
+  setStatus("Drive import is not wired yet. Next step: add Google Picker + OAuth.");
+}
+
+function saveToDrivePlaceholder() {
+  setStatus("Drive save is not wired yet. Next step: add Google Drive API + OAuth.");
 }
 
 document.getElementById("fileInput").addEventListener("change", async (event) => {
@@ -252,10 +360,6 @@ document.getElementById("fileInput").addEventListener("change", async (event) =>
   if (!file) return;
 
   const lowerName = file.name.toLowerCase();
-
-  currentPdf = null;
-  currentPage = 1;
-  pdfPageCount = 1;
 
   try {
     if (lowerName.endsWith(".pdf")) {
@@ -269,6 +373,20 @@ document.getElementById("fileInput").addEventListener("change", async (event) =>
   }
 });
 
+document.getElementById("loadSessionInput").addEventListener("change", async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  try {
+    await loadSessionFromFile(file);
+  } catch (error) {
+    console.error("Session load error:", error);
+    setStatus("Could not load that session file.");
+  }
+
+  event.target.value = "";
+});
+
 document.getElementById("penBtn").addEventListener("click", setPenMode);
 document.getElementById("eraserBtn").addEventListener("click", setEraserMode);
 document.getElementById("selectBtn").addEventListener("click", setSelectMode);
@@ -276,6 +394,9 @@ document.getElementById("textBtn").addEventListener("click", addTextLabel);
 document.getElementById("undoBtn").addEventListener("click", undo);
 document.getElementById("clearBtn").addEventListener("click", clearAnnotations);
 document.getElementById("exportBtn").addEventListener("click", exportPNG);
+document.getElementById("saveSessionBtn").addEventListener("click", saveSessionToFile);
+document.getElementById("importDriveBtn").addEventListener("click", importFromDrivePlaceholder);
+document.getElementById("saveDriveBtn").addEventListener("click", saveToDrivePlaceholder);
 
 document.getElementById("prevPageBtn").addEventListener("click", async () => {
   if (currentPdf && currentPage > 1) {
@@ -317,7 +438,6 @@ fabricCanvas.on("object:added", (event) => {
   if (!obj) return;
 
   if (obj.annotationType && !isRestoring) {
-    // avoid double-history bursts for free draw paths, which are already tracked
     if (obj.type !== "path") {
       saveHistory();
     }
